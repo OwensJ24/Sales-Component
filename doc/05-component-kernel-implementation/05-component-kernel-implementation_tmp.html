@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>05-component-kernel-implementation.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* a11y-light theme */
+/* Based on the Tomorrow Night Eighties theme: https://github.com/isagalaev/highlight.js/blob/master/src/styles/tomorrow-night-eighties.css */
+/* @author: ericwbailey */
+
+/* Comment */
+.hljs-comment,
+.hljs-quote {
+  color: #696969;
+}
+
+/* Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+  color: #d91e18;
+}
+
+/* Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+  color: #aa5d00;
+}
+
+/* Yellow */
+.hljs-attribute {
+  color: #aa5d00;
+}
+
+/* Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: #008000;
+}
+
+/* Blue */
+.hljs-title,
+.hljs-section {
+  color: #007faa;
+}
+
+/* Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #7928a1;
+}
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  background: #fefefe;
+  color: #545454;
+  padding: 0.5em;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+@media screen and (-ms-high-contrast: active) {
+  .hljs-addition,
+  .hljs-attribute,
+  .hljs-built_in,
+  .hljs-builtin-name,
+  .hljs-bullet,
+  .hljs-comment,
+  .hljs-link,
+  .hljs-literal,
+  .hljs-meta,
+  .hljs-number,
+  .hljs-params,
+  .hljs-string,
+  .hljs-symbol,
+  .hljs-type,
+  .hljs-quote {
+        color: highlight;
+    }
+
+    .hljs-keyword,
+    .hljs-selector-tag {
+        font-weight: bold;
+    }
+}
+
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="portfolio-part-5-kernel-implementation">Portfolio Part 5: Kernel Implementation</h1>
+<ul>
+<li><strong>Name</strong>: <!-- TODO: fill with first and last name (e.g., Brutus Buckeye) and delete this comment --> Xzavier Owens</li>
+<li><strong>Dot Number</strong>: <!-- TODO: fill with OSU dot number (e.g., buckeye.17) and delete this comment --></li>
+<li><strong>Due Date</strong>: <!-- TODO: fill out with due date and time (e.g., 10/17 @ 3:10 PM EST) and delete this comment --></li>
+</ul>
+<h2 id="assignment-overview">Assignment Overview</h2>
+<p>At this point in the portfolio project, the only thing left as far as
+implementation is concerned is the kernel implementation. Therefore, you can
+treat this final formative assessment as kernel implementation practice. In
+other words, assuming that all the other pieces are in order, your job is to
+complete a kernel implementation, just like you've done so many times already.</p>
+<p>In keeping with the software sequence discipline, you should create the final
+class in the form of <code>Component#</code>, where <code>Component</code> is the name of your
+component and <code>#</code> is the number of your implementation. For example, using
+Point3D, our kernel implementation might be called <code>Point3D1</code>. Note that
+by convention, we use the letter <code>L</code> to indicate a &quot;thin&quot; layer over an existing
+component. For instance, we might call it <code>Point3D1L</code> if the representation is
+one of the point classes that already exists in Java. Alternatively, you are
+welcome to be more explicit in your naming conventions. For example, if we
+implement Point3D on an array, we might call it <code>Point3DOnArray</code>. This more
+closely mirrors the naming style seen in the Java Collections Framework, such
+as <code>HashSet</code> vs. <code>TreeSet</code>. In any case, the implementation should have the
+following form:</p>
+<pre class="hljs"><code><div><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Point3D1</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Point3DSecondary</span> </span>{
+   ...
+}
+</div></code></pre>
+<p>As a reminder, the kernel implementation should only contain implementations
+of the kernel and Standard methods. You may also implement the Iterable methods
+at this point. Likewise, you will need to define at least one constructor.
+Finally, you <strong>must</strong> specify the convention and correspondence at the top
+of the file. Feel free to reference any of your kernel implementations for
+examples of these.</p>
+<h2 id="assignment-checklist">Assignment Checklist</h2>
+<p>Because these documents are long and full of text, you will be supplied with
+a quick overview of what you need to do to get the assignment done as follows:</p>
+<h3 id="getting-started-tasks">Getting Started Tasks</h3>
+<ul>
+<li><input type="checkbox" id="checkbox0"><label for="checkbox0">I have added my name to the top of this document</label></li>
+<li><input type="checkbox" id="checkbox1"><label for="checkbox1">I have added my dot number to the top of this document</label></li>
+<li><input type="checkbox" id="checkbox2"><label for="checkbox2">I have added the due date to the top of this document</label></li>
+<li><input type="checkbox" id="checkbox3"><label for="checkbox3">I have read the assignment overview in the &quot;Assignment Overview&quot; section</label></li>
+<li><input type="checkbox" id="checkbox4"><label for="checkbox4">I have read the assignment learning objectives in the &quot;Assignment Learning Objectives&quot; section</label></li>
+<li><input type="checkbox" id="checkbox5"><label for="checkbox5">I have read the assignment rubric in the &quot;Assignment Rubric&quot; section</label></li>
+<li><input type="checkbox" id="checkbox6"><label for="checkbox6">I have read this checklist</label></li>
+</ul>
+<h3 id="ongoing-tasks">Ongoing Tasks</h3>
+<ul>
+<li><input type="checkbox" id="checkbox7"><label for="checkbox7">I have shared my representation and justification in the &quot;Pre-Assignment&quot; section</label></li>
+<li><input type="checkbox" id="checkbox8"><label for="checkbox8">I have created a kernel implementation</label>
+<ul>
+<li><input type="checkbox" id="checkbox9"><label for="checkbox9">I have created a new Java file in </label><code>src</code></li>
+<li><input type="checkbox" id="checkbox10"><label for="checkbox10">I have named the new Java file correctly (e.g., </label><code>NaturalNumber1</code>)</li>
+<li><input type="checkbox" id="checkbox11"><label for="checkbox11">I have implemented all of the kernel methods</label></li>
+<li><input type="checkbox" id="checkbox12"><label for="checkbox12">I have implemented all of the Standard methods</label></li>
+<li><input type="checkbox" id="checkbox13"><label for="checkbox13">I have respected the kernel purity rule</label></li>
+</ul>
+</li>
+</ul>
+<h3 id="submission-tasks">Submission Tasks</h3>
+<ul>
+<li><input type="checkbox" id="checkbox14"><label for="checkbox14">I have shared assignment feedback in the &quot;Assignment Feedback&quot; section</label></li>
+<li><input type="checkbox" id="checkbox15"><label for="checkbox15">I have converted this document to a PDF</label></li>
+<li><input type="checkbox" id="checkbox16"><label for="checkbox16">I have converted my kernel implementation to a PDF</label></li>
+<li><input type="checkbox" id="checkbox17"><label for="checkbox17">I am prepared to submit both PDFs on Carmen</label></li>
+<li><input type="checkbox" id="checkbox18"><label for="checkbox18">I am prepared to give my peers feedback on their ideas</label></li>
+</ul>
+<h2 id="assignment-learning-objectives">Assignment Learning Objectives</h2>
+<p>Without learning objectives, there really is no clear reason why a particular
+assessment or activity exists. Therefore, to be completely transparent, here is
+what we're hoping you will learn through this particular aspect of the portfolio
+project. Specifically, students should be able to:</p>
+<ol>
+<li>Select a reasonable representation for a kernel implementation</li>
+<li>Provide a representation invariant (i.e., convention) and abstraction
+function (i.e., correspondence) for a kernel implementation</li>
+<li>Carry out kernel and Standard method implementations as well as constructor
+implementations given a contract, a convention, and a correspondence</li>
+</ol>
+<h2 id="assignment-rubric">Assignment Rubric</h2>
+<p>Again, to be completely transparent, most of the portfolio project, except the
+final submission, is designed as a formative assessment. Formative assessments
+are meant to provide ongoing feedback in the learning process. Therefore,
+the rubric is designed to assess the learning objectives <em>directly</em> in a way
+that is low stakes—meaning you shouldn't have to worry about the grade. Just
+do good work.</p>
+<ol>
+<li>(3 points) In this assignment, you must select a representation for your
+kernel implementation and justify it. Remember that there are a variety of
+reasons for selecting a particular representation, but a good start is to
+choose one that would be easy to work with. Also, remember that part of
+selecting a representation is also explaining which configurations are valid
+and how the representation will be interpreted.</li>
+<li>(3 points) In the source code, you must provide that actual convention and
+correspondence that you may have discussed below. There is no expectation
+that either the convention or correspondence are written using mathematical
+notation.</li>
+<li>(4 points) The kernel implementation must have implementations for all kernel
+and Standard methods as well as at least one constructor. Everything you have
+learned this semester about kernel implementations could reasonably be
+assessed here, such as remembering to use a <code>createNewRep()</code> method wherever
+a fresh representation is needed or respecting the kernel purity rule.</li>
+</ol>
+<h2 id="pre-assignment-tasks">Pre-Assignment Tasks</h2>
+<blockquote>
+<p>While you're nearing the end of a complete component implementation, there are
+still a few challenging questions to answer. The one we will be focusing on
+right now is the choice of representation. In other words, how do you plan
+to model your component using other data structures? For the first time this
+semester, you will be selecting your own representation, and you will be
+defining your own convention and correspondence for this representation.
+Rather than jumping into the code, take a moment to actually select that
+representation now and justify it. Feel free to also use this space to
+discuss how that representation will be restricted (i.e., by convention)
+and interpreted (i.e., by correspondence).</p>
+</blockquote>
+<!-- TODO: select a representation and explain why -->
+<p>The string key will represent the name and unique identifer of the item, and the
+SalesData class will represent the data corresponding to the item in the map.</p>
+<h2 id="assignment-tasks">Assignment Tasks</h2>
+<p>Your primary task for this assignment is to create a kernel implementation that
+falls from your design up to this point. Since you have done this several times
+in the past, there should be no surprises about what goes into a kernel
+implementation. However, writing the convention and correspondence is a new
+expectation, so take same time to complete the pre-assignment above first.</p>
+<p>As with the previous assignments, you will share no code here. Instead, create
+your kernel implementation file in <code>src</code>, and follow the submission instructions
+below.</p>
+<h2 id="post-assignment-tasks">Post-Assignment Tasks</h2>
+<p>The following sections detail everything that you should do once you've
+completed the assignment.</p>
+<h3 id="submission">Submission</h3>
+<p>If you have completed the assignment using this template, we recommend that you
+convert it to a PDF before submission. If you're not sure how, check out
+this <a href="https://therenegadecoder.com/blog/how-to-convert-markdown-to-a-pdf-3-quick-solutions/">Markdown to PDF guide</a>. However, PDFs should be
+created for you automatically every time you save, so just double check that
+all your work is there before submitting.</p>
+<p>In addition, the Java file you created should be submitted separately as a PDF.
+This template includes the print to PDF extension, so you should be able to
+click the print icon in the top right of this panel. In any case, do not copy
+the Java code into this file.</p>
+<h3 id="peer-review">Peer Review</h3>
+<p>Following the completion of this assignment, you will be assigned three
+students' component abstract classes for review. Please do not spend a ton of
+time on your reviews, <strong>perhaps 10-15 minutes each</strong>. Your job during the peer
+review process is to help your peers work through the logic of their implementations
+and identify gaps in their use of design-by-contract (i.e., forgetting checks
+for preconditions). If something seems wrong to you, it's probably a good hunch,
+so make sure to point it out.</p>
+<p>When reviewing your peers' assignments, please treat them with respect. We
+recommend using the following feedback rubric to ensure that your feedback is
+both helpful and respectful (you may want to render the markdown as HTML or a
+PDF to read this rubric as a table).</p>
+<table>
+<thead>
+<tr>
+<th>Criteria of Constructive Feedback</th>
+<th>Missing</th>
+<th>Developing</th>
+<th>Meeting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Specific</td>
+<td>All feedback is general (not specific)</td>
+<td>Some (but not all) feedback is specific and some examples may be provided.</td>
+<td>All feedback is specific, with examples provided where possible</td>
+</tr>
+<tr>
+<td>Actionable</td>
+<td>None of the feedback provides actionable items or suggestions for improvement</td>
+<td>Some feedback provides suggestions for improvement, while some do not</td>
+<td>All (or nearly all) feedback is actionable; most criticisms are followed by suggestions for improvement</td>
+</tr>
+<tr>
+<td>Prioritized</td>
+<td>Feedback provides only major or minor concerns, but not both. Major and minar concerns are not labeled or feedback is unorganized</td>
+<td>Feedback provides both major and minor concerns, but it is not clear which is which and/or the feedback is not as well organized as it could be</td>
+<td>Feedback clearly labels major and minor concerns. Feedback is organized in a way that allows the reader to easily understand which points to prioritize in a revision</td>
+</tr>
+<tr>
+<td>Balanced</td>
+<td>Feedback describes either strengths or areas of improvement, but not both</td>
+<td>Feedback describes both strengths and areas for improvement, but it is more heavily weighted towards one or the other, and/or descusses both but does not clearly identify which part of the feedback is a strength/area for improvement</td>
+<td>Feedback provides balanced discussion of the document's strengths and areas for improvement. It is clear which piece of feedback is which</td>
+</tr>
+<tr>
+<td>Tactful</td>
+<td>Overall tone and language are not appropriate (e.g., not considerate, could be interpreted as personal criticism or attack)</td>
+<td>Overall feedback tone and language are general positive, tactul, and non-threatening, but one or more feedback comments could be interpretted as not tactful and/or feedback leans toward personal criticism, not focused on the document</td>
+<td>Feedback tone and language are positive, tactful, and non-threatening. Feedback addesses the document, not the writer</td>
+</tr>
+</tbody>
+</table>
+<h3 id="assignment-feedback">Assignment Feedback</h3>
+<blockquote>
+<p>Now that you've had a chance to complete the assignment, is there anything you
+would like to say about the assignment? For example, are there any resources
+that could help you complete this assignment? Feel free to use the feedback
+rubric above when reviewing this assignment.</p>
+</blockquote>
+<!-- TODO: share your feedback here -->
+
+</body>
+</html>
