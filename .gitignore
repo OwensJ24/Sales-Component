@@ -25,3 +25,7 @@ replay_pid*
 
 # rendered files
 *.pdf
+
+#Binaries
+/bin
+/lib

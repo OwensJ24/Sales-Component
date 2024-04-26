@@ -361,7 +361,7 @@ case, I trust that you can figure it out!
 ## Post-Assignment Tasks
 
 The following sections detail everything that you should do once you've
-completed the assignment.
+completed the as                                                                                                              signment.
 
 ### Submission
 
